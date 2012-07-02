@@ -16,24 +16,28 @@ Description:  Provides a PAM module that can authenticate against an LCMAPSd
 	      Options can be given either on the pam commandline or in a config
               file which can be specified on the pam commandline.
               Valid options:
-		config          - only on commandline: specifies path of config
-		                  file
-                capath          - as understood by openssl and curl
-                cafile          - idem
-                hostcert        - idem (corresponding to clientcert)
-                hostkey         - idem
-		lcmapsd_url     - LCMAPSd url, e.g.
-		                  https://localhost:8443/lcmaps/mapping/ssl
-                lcmapsd_timeout - LCMAPSd timeout (default 1 sec)
-                lcmapsd_mode    - basic or full (default)
-                proxyfmt        - format for renaming, %d is replaced with
-				  target_uid, XXXXXX as in mkstemp() (default
-				  /tmp/x509up_u%d.XXXXXX)
-                rename          - whether to rename (default 1, i.e. yes)
-                chown           - whether to chown (default 1, i.e. yes)
-                intern_env      - whether to use the pam environment to pass
-				  data from pam_sm_authenticate to
-				  pam_sm_setcred (default 1, i.e. yes)
+		config           - only on commandline: specifies path of config
+		                   file
+                capath           - as understood by openssl and curl
+                cafile           - idem
+                hostcert         - idem (corresponding to clientcert)
+                hostkey          - idem
+		lcmapsd_url      - LCMAPSd url, e.g.
+		                   https://localhost:8443/lcmaps/mapping/ssl
+                lcmapsd_timeout  - LCMAPSd timeout (default 1 sec)
+                lcmapsd_mode     - basic or full (default)
+                proxyfmt         - format for renaming, %d is replaced with
+				   target_uid, XXXXXX as in mkstemp() (default
+				   /tmp/x509up_u%d.XXXXXX)
+                rename           - whether to rename (default 1, i.e. yes)
+                chown            - whether to chown (default 1, i.e. yes)
+		del_proxy_on_fail- remove proxy upon failure (default 0, i.e.
+                                   no)
+                proxy_as_cafile  - use proxy also as cafile, probably needed on
+                                   RH 6 and alike (default 0, i.e. no)
+                intern_env       - whether to use the pam environment to pass
+				   data from pam_sm_authenticate to
+				   pam_sm_setcred (default 1, i.e. yes)
 
 Example:      E.g.
 		auth  required   pam_lcmapsd.so capath=/etc/grid-security/certificates lcmapsd_timeout=2

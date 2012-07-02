@@ -252,6 +252,8 @@ void _pam_lcmapsd_config_init(pam_lcmapsd_opts_t *opts)	{
     opts->rename=DEF_RENAME;
     opts->chown=DEF_CHOWN;
     
+    opts->rmproxyfail=DEF_RMPROXYFAIL;
+    opts->proxyascafile=DEF_PROXYASCAFILE;
     opts->useenv=DEF_USEENV;
 
 }
@@ -307,6 +309,10 @@ int _pam_lcmapsd_parse_config(pam_lcmapsd_opts_t *opts) {
 
     _conf_val_int(buf,OPT_RENAME,&(opts->rename));
     _conf_val_int(buf,OPT_CHOWN, &(opts->chown));
+    
+    _conf_val_int(buf,OPT_RMPROXYFAIL,&(opts->rmproxyfail));
+    _conf_val_int(buf,OPT_PROXYASCAFILE,&(opts->proxyascafile));
+
     _conf_val_int(buf,OPT_USEENV,&(opts->useenv));
 
 finalize:
@@ -393,6 +399,20 @@ int _pam_lcmapsd_parse_cmdline(int argc, const char *argv[],
 		return i+1;
 	    }
 	    opts->chown=intval;
+	    free(val);
+	} else if (strcmp(opt,OPT_RMPROXYFAIL)==0)	{
+	    if (sscanf(val,"%d",&intval)!=1)	{
+		free(val); free(opt);
+		return i+1;
+	    }
+	    opts->rmproxyfail=intval;
+	    free(val);
+	} else if (strcmp(opt,OPT_PROXYASCAFILE)==0)	{
+	    if (sscanf(val,"%d",&intval)!=1)	{
+		free(val); free(opt);
+		return i+1;
+	    }
+	    opts->proxyascafile=intval;
 	    free(val);
 	} else if (strcmp(opt,OPT_USEENV)==0)	{
 	    if (sscanf(val,"%d",&intval)!=1)	{

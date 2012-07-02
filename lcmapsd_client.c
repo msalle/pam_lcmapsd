@@ -141,6 +141,7 @@ lcmapsd_err_t _lcmapsd_rename(cred_t *cred, const char *fmt, int *err) {
     char *newfile=NULL,*buffer=NULL;
     int len,fd;
     struct stat buf;
+    int prc;
 
     /* Check we need to do something */
     if (cred->proxyfile==NULL || fmt==NULL)
@@ -196,27 +197,48 @@ lcmapsd_err_t _lcmapsd_rename(cred_t *cred, const char *fmt, int *err) {
 	}
 	fd=open(newfile,O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     }
-    /* If successful, chown it to the original file */
-    if (fd==-1 || fchown(fd,buf.st_uid,buf.st_gid)==-1)	{
+    /* Check it has been opened successfully */
+    if (fd==-1)	{
 	*err=errno;
 	free(newfile);
 	return LCMAPSD_RENAME_ERR;
     }
 
-    /* Write buffer to file, close and unlink old file */
-    if (write(fd,buffer,buf.st_size)!=buf.st_size ||
-	close(fd)==-1 ||
-	unlink(cred->proxyfile)==-1)	{
+    /* chown it to the original file and write buffer to it */
+    if (fchown(fd,buf.st_uid,buf.st_gid)==-1 ||
+	write(fd,buffer,buf.st_size)!=buf.st_size)  {
+	/* Writing new file failed, remove it again, close() might fail, but we
+	 * are cleaning up in any case */
 	*err=errno;
+	close(fd);
+	unlink(newfile);
+	free(newfile);
 	return LCMAPSD_RENAME_ERR;
     }
 
-    /* free memory and update cred->proxyfile */
+    /* Close new file */
+    if (close(fd)==-1) {
+	*err=errno;
+	unlink(newfile);
+	free(newfile);
+	return LCMAPSD_RENAME_ERR;
+    }
+   
+    /* free memory */
     free(buffer);
+    
+    /* remove old file */
+    if (unlink(cred->proxyfile)==-1)	{
+	*err=errno;
+	prc=LCMAPSD_RENAME_ERR;
+    } else
+	prc=LCMAPSD_SUCCESS;
+
+    /* Update proxyfile to point to the new one */
     free(cred->proxyfile);
     cred->proxyfile=newfile;
-    
-    return LCMAPSD_SUCCESS;
+
+    return prc;
 }
 
 /**

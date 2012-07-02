@@ -511,6 +511,31 @@ static int _chown_rename_proxy(pam_handle_t *pamh,
 }
 
 /**
+ * Removes proxy in cred (when set) from disk. Upon error errno is returned in
+ * *err
+ * \param pamh pam handle
+ * \param cred credential structure containing proxy filename
+ * \param *err will contain errno upon error
+ * \return 0 on success (or proxyfile==NULL), -1 on error
+ */
+static int _remove_proxy(pam_handle_t *pamh, cred_t *cred, int *err)    {
+    /* If we don't know the proxy name, we can't do anything */
+    if (cred->proxyfile==NULL)
+	return 0;
+
+    /* Remove the file */
+    if (unlink(cred->proxyfile)==-1)	{
+	pam_syslog(pamh,LOG_WARNING,"Could not remove proxy file %s\n",
+		cred->proxyfile);
+	*err=errno;
+	return -1;
+    }
+    pam_syslog(pamh,LOG_INFO,"Removed proxy file %s\n", cred->proxyfile);
+
+    return 0;
+}
+
+/**
  * Parses error code returned by _lcmapsd_curl and logs a pam syslog message
  * \param pamh pam handle
  * \param rc return code from _lcmapsd_curl
@@ -580,7 +605,7 @@ PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
     cred_t cred;
     pam_lcmapsd_opts_t opts;
-    int rc,prc;
+    int rc,prc,err=0;
     char *errstr=NULL;
 
     /* Initialize cred structure */
@@ -592,26 +617,26 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) 
     /* Get commandline (and perhaps config file) options */
     if ( (rc=_pam_lcmapsd_parse_cmdline(argc,argv,&opts)) != 0)	{
 	_parse_opts_cmdline_returncode(pamh,rc,argv,&opts);
-	_pam_lcmapsd_config_free(&opts);
-	return PAM_AUTHINFO_UNAVAIL;
+	prc=PAM_AUTHINFO_UNAVAIL;
+	goto _auth_cleanup;
     }
 
     /* obtain proxy location (when applicable) from data/env */
     if (opts.lcmapsd.mode==LCMAPSD_MODE_FULLSSL)   {
-	if ( (prc=_get_proxy(pamh,&cred))!=PAM_SUCCESS) {
-	    _pam_lcmapsd_config_free(&opts);
-	    return prc;
-	}
+	if ( (prc=_get_proxy(pamh,&cred))!=PAM_SUCCESS)
+	    goto _auth_cleanup;
 	/* Put proxy location also in lcmaps credential fields */
 	free(opts.lcmapsd.certinfo.clientcert);
 	opts.lcmapsd.certinfo.clientcert=strdup(cred.proxyfile);
 	free(opts.lcmapsd.certinfo.clientkey);
 	opts.lcmapsd.certinfo.clientkey=strdup(cred.proxyfile);
-    } else if (opts.lcmapsd.mode==LCMAPSD_MODE_BASIC)   {
-	if ( (prc=_get_dn_fqans(pamh,&cred))!=PAM_SUCCESS)  {
-	    _pam_lcmapsd_config_free(&opts);
-	    return prc;
+	if (opts.proxyascafile)	{
+	    free(opts.lcmapsd.certinfo.cafile);
+	    opts.lcmapsd.certinfo.cafile=strdup(cred.proxyfile);
 	}
+    } else if (opts.lcmapsd.mode==LCMAPSD_MODE_BASIC)   {
+	if ( (prc=_get_dn_fqans(pamh,&cred))!=PAM_SUCCESS)
+	    goto _auth_cleanup;
     }
 
     /* Do lcmapsd run */
@@ -622,6 +647,11 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) 
 
     if (prc==PAM_SUCCESS)
 	prc=_store_cred(pamh, &opts, &cred);
+
+_auth_cleanup:
+    /* On failure, remove proxy (when set in the options) */
+    if (prc!=PAM_SUCCESS && opts.rmproxyfail)
+	_remove_proxy(pamh,&cred,&err);
 
     /* Free cred struct */
     _lcmapsd_free_cred(&cred);
@@ -645,7 +675,7 @@ PAM_EXTERN int
 pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv) {
     pam_lcmapsd_opts_t opts;
     cred_t cred;
-    int prc,rc;
+    int prc,rc,err=0;
 
     /* First handle credential removal: nothing to do */
     if ( flags & PAM_DELETE_CRED )
@@ -660,34 +690,34 @@ pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv) {
     /* Get commandline (and perhaps config file) options */
     if ( (rc=_pam_lcmapsd_parse_cmdline(argc,argv,&opts)) !=0 ) {
         _parse_opts_cmdline_returncode(pamh,rc,argv,&opts);
-        _pam_lcmapsd_config_free(&opts);
-        return PAM_CRED_ERR;
+	prc=PAM_CRED_ERR;
+	goto _setcred_cleanup;
     }
 
     /* Try to retrieve the data from the pam environment */
-    if (opts.useenv && (prc=_restore_pam_data(pamh))!=PAM_SUCCESS)  {
-        _pam_lcmapsd_config_free(&opts);
-	return prc;
-    }
+    if (opts.useenv && (prc=_restore_pam_data(pamh))!=PAM_SUCCESS)
+	goto _setcred_cleanup;
 
     /* Get pam data */
-    if ( (prc=_retrieve_cred(pamh, &cred))!=PAM_SUCCESS)    {
-        _pam_lcmapsd_config_free(&opts);
-        _lcmapsd_free_cred(&cred);
-	return prc;
-    }
+    if ( (prc=_retrieve_cred(pamh, &cred))!=PAM_SUCCESS)
+	goto _setcred_cleanup;
 
     /* chown and rename proxy when set in opts, updata data and set env
      * variable. Do only for full mode. */
     if (opts.lcmapsd.mode==LCMAPSD_MODE_FULLSSL)
 	prc=_chown_rename_proxy(pamh,&opts,&cred);
 
+_setcred_cleanup:
+    /* On failure, remove proxy (when set in the options) */
+    if (prc!=PAM_SUCCESS && opts.rmproxyfail)
+	_remove_proxy(pamh,&cred,&err);
+
     /* Free cred struct */
     _lcmapsd_free_cred(&cred);
 
     /* Cleanup opts */
     _pam_lcmapsd_config_free(&opts);
-    
+
     /* all done */
     return prc;
 }

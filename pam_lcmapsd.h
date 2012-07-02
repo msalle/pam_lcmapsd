@@ -23,13 +23,17 @@
 #define PAM_TARGET_SGIDS	PAM_PREFIX "TARGET_SGIDS"
 
 /* LCMAPSd defaults */
-#define DEF_URL		"https://localhost:8443/lcmaps/mapping/ssl"
-#define DEF_MODE	LCMAPSD_MODE_FULLSSL
-#define DEF_TIMEOUT	1L
-#define DEF_FORMAT	"/tmp/x509up_u%d.XXXXXX"    /* formatstring for file */
-#define DEF_RENAME	1   /* rename (copy and remove) existing file */
-#define DEF_CHOWN	1   /* chown existing file */
-#define DEF_USEENV	1   /* use pam environment to work around pam data */
+#define DEF_URL		    "https://localhost:8443/lcmaps/mapping/ssl"
+#define DEF_MODE	    LCMAPSD_MODE_FULLSSL
+#define DEF_TIMEOUT	    1L
+#define DEF_FORMAT	    "/tmp/x509up_u%d.XXXXXX"    /* formatstring for file
+							 */
+#define DEF_RENAME	    1   /* rename (copy and remove) existing file */
+#define DEF_CHOWN	    1   /* chown existing file */
+#define DEF_RMPROXYFAIL	    1   /* remove proxy on failure */
+#define DEF_PROXYASCAFILE   1	/* also set proxy as cafile, necessary on RH6 */
+#define DEF_USEENV	    1	/* use pam environment to work around pam data
+				 */
 
 /* Config file/cmdline option fields */
 #define OPT_CONFIG		"config"
@@ -43,6 +47,8 @@
 #define OPT_PROXYFMT		"proxyfmt"
 #define OPT_RENAME		"rename"
 #define OPT_CHOWN		"chown"
+#define OPT_RMPROXYFAIL		"del_proxy_on_fail"
+#define OPT_PROXYASCAFILE	"prox_as_cafile"
 #define OPT_USEENV		"intern_env"
 
 /* Structure containing all the options for pam module */
@@ -54,6 +60,8 @@ typedef struct {
     char *proxyfmt;	    /* Format string for proxy file */
     int rename;		    /* Whether to rename into standard form */
     int chown;		    /* Whether to chown to target user */
+    int rmproxyfail;	    /* Whether to remove proxy upon failure */
+    int proxyascafile;	    /* Whether to set proxy also as cafile */
     int useenv;		    /* use pam environment to work around pam data */
 } pam_lcmapsd_opts_t;
 
