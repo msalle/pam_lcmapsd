@@ -30,8 +30,8 @@
 							 */
 #define DEF_RENAME	    1   /* rename (copy and remove) existing file */
 #define DEF_CHOWN	    1   /* chown existing file */
-#define DEF_RMPROXYFAIL	    1   /* remove proxy on failure */
-#define DEF_PROXYASCAFILE   1	/* also set proxy as cafile, necessary on RH6 */
+#define DEF_RMPROXYFAIL	    0   /* remove proxy on failure */
+#define DEF_PROXYASCAFILE   0	/* also set proxy as cafile, necessary on RH6 */
 #define DEF_USEENV	    1	/* use pam environment to work around pam data
 				 */
 
@@ -48,7 +48,7 @@
 #define OPT_RENAME		"rename"
 #define OPT_CHOWN		"chown"
 #define OPT_RMPROXYFAIL		"del_proxy_on_fail"
-#define OPT_PROXYASCAFILE	"prox_as_cafile"
+#define OPT_PROXYASCAFILE	"proxy_as_cafile"
 #define OPT_USEENV		"intern_env"
 
 /* Structure containing all the options for pam module */
