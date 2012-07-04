@@ -8,6 +8,8 @@
 
 #include <curl/curl.h>
 
+#include <json/json.h>
+
 #include "lcmapsd_client.h"
 
 /************************************************************************/
@@ -49,33 +51,72 @@ _curl_memwrite(void *contents, size_t size, size_t nmemb, void *userp) {
 
 /**
  * Parses memory as lcmapsd json. Looks for a valid uid.
- * \return 1 when uid/gid is found, otherwise 0
+ * \return 0 on success, -1 when lcmaps/mapping/posix object cannot be found, -2
+ * when either uid or gid cannot be found, -3 when sgids are found but could not
+ * be parsed, -4 out of mem
  */
 static int _lcmapsd_parse_json(char *memory, cred_t *cred)    {
-    char *pos0=memory,*pos=NULL;
+    struct json_object *obj, *lcmaps_obj, *cred_obj, *cred_arrobj;
+    int i,rc=0;
 
-    /* Find posix tag */
-    if ( (pos0=strstr(pos0,"\"posix\""))==NULL ||
-         (pos0=strstr(pos0,"{"))==NULL)
-	return 0;
+    /* Find lcmaps/mapping/posix object */
+    if ( (obj=json_tokener_parse(memory))==NULL ||
+         (lcmaps_obj=json_object_object_get(obj, "lcmaps"))==NULL ||
+         (lcmaps_obj=json_object_object_get(lcmaps_obj, "mapping"))==NULL ||
+         (lcmaps_obj=json_object_object_get(lcmaps_obj, "posix"))==NULL ) {
+	rc=-1;
+	goto cleanup;
+    }
 
     /* uid */
-    if ( (pos=strstr(pos0,"\"uid\""))==NULL ||
-         (pos=strstr(pos,"{"))==NULL ||
-         (pos=strstr(pos,"\"id\""))==NULL ||
-         (pos=strstr(pos,":"))==NULL ||
-         sscanf(pos+1,"%d",&(cred->uid))!=1)
-	return 0;
-	
-    /* gid */
-    if ( (pos=strstr(pos0,"\"pgid\""))==NULL ||
-         (pos=strstr(pos,"{"))==NULL ||
-         (pos=strstr(pos,"\"id\""))==NULL ||
-         (pos=strstr(pos,":"))==NULL ||
-         sscanf(pos+1,"%d",&(cred->gid))!=1)
-	return 0;
+    if ( (cred_obj=json_object_object_get(lcmaps_obj, "uid")) &&
+         (cred_obj=json_object_object_get(cred_obj, "id")) &&
+	 json_object_is_type(cred_obj,json_type_int) )
+	cred->uid=json_object_get_int(cred_obj);
+    else    {
+	rc=-2;
+	goto cleanup;
+    }
 
-    return 1;
+    /* gid */
+    if ( (cred_obj=json_object_object_get(lcmaps_obj, "pgid")) &&
+         (cred_obj=json_object_object_get(cred_obj, "id")) &&
+	 json_object_is_type(cred_obj,json_type_int) )
+	cred->gid=json_object_get_int(cred_obj);
+    else    {
+	rc=-2;
+	goto cleanup;
+    }
+
+    /* sgids */
+    if ( (cred_arrobj=json_object_object_get(lcmaps_obj, "sgid")) &&
+	 json_object_is_type(cred_arrobj,json_type_array) &&
+    	 (cred->nsgid=json_object_array_length(cred_arrobj))>0 ) {
+	/* We have more than 0 sgids */
+	if ( (cred->sgids=malloc(cred->nsgid*sizeof(gid_t)))==NULL ) {
+	    rc=-4;
+	    goto cleanup;
+	}
+	/* Get the different sgids */
+	for (i=0; i<cred->nsgid; i++)    {
+	    /*Getting the array element at position i*/
+	    if ( (cred_obj=json_object_array_get_idx(cred_arrobj, i)) &&
+		 (cred_obj=json_object_object_get(cred_obj, "id")) &&
+		 json_object_is_type(cred_obj,json_type_int) )
+		cred->sgids[i]=json_object_get_int(cred_obj);
+	    else { /* Have sgids, but are invalid */
+		rc=-3;
+		free(cred->sgids); cred->sgids=NULL;
+		goto cleanup;
+	    }
+	}
+    }
+
+cleanup:
+    /* Clean json data */
+    json_object_put(obj);
+
+    return rc;
 }
 
 /************************************************************************/
@@ -344,7 +385,7 @@ lcmapsd_err_t _lcmapsd_curl(lcmapsd_opts_t *opts, cred_t *cred, char **errstr) {
 
     /* Did we receive a proper answer? */
     if (httpresp==200)  {
-        if (chunk.size>0 && _lcmapsd_parse_json(chunk.memory, cred) )
+        if (chunk.size>0 && _lcmapsd_parse_json(chunk.memory, cred)==0 )
             rc=LCMAPSD_SUCCESS;
 	else
             /* We got a 200, should have valid entry, set to try again */

@@ -43,9 +43,11 @@ AC_PROG_LIBTOOL
 
 AC_CHECK_LIB([curl],[curl_easy_init])
 
+AC_CHECK_LIB([json],[json_object_object_get])
+
 AC_CHECK_LIB([pam], [pam_strerror])
 
-AC_CHECK_HEADERS([curl/curl.h security/pam_modules.h])
+AC_CHECK_HEADERS([curl/curl.h json/json.h security/pam_modules.h])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADERS([pam_lcmapsd_config.h])

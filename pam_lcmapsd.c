@@ -245,7 +245,7 @@ static int _store_cred(pam_handle_t *pamh, pam_lcmapsd_opts_t *opts, cred_t *cre
 	return PAM_AUTHINFO_UNAVAIL;
     }
 
-    /* Store proxy, uid and gid in internal env */
+    /* Store proxy, uid and gid (not sgid) in internal env */
     if (opts->useenv)	{
 	/* proxy */
 	len=1+snprintf(buffer,0,"%s=%s",PAM_PROXY_FILENAME,cred->proxyfile);

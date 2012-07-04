@@ -64,7 +64,7 @@ int main(int argc, char *argv[])    {
     /* initialize cred structure */
     cred_t cred;
     pam_lcmapsd_opts_t opts;
-    int rc,prc=0;
+    int i,rc,prc=0;
     int err;
     char *errstr=NULL;
 
@@ -128,7 +128,10 @@ int main(int argc, char *argv[])    {
     if ( (prc=_parse_lcmapsd_returncode(rc,errstr))!=0 )
 	goto cleanup;
 
-    printf("Found credentials: uid=%d gid=%d\n",cred.uid,cred.gid);
+    printf("Found credentials:\n");
+    printf(" uid=%d\n gid=%d\n",cred.uid,cred.gid);
+    for (i=0; i<cred.nsgid; i++)    
+	printf(" sgid[%d]=%d\n",i,cred.sgids[i]);
 
     /* In full mode chown and/or rename proxy */
     if (opts.lcmapsd.mode==LCMAPSD_MODE_FULLSSL)    {
