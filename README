@@ -3,7 +3,7 @@ This software is designed for GNU/Linux with glibc 2.1 or later.
 Summary:      PAM module to authenticate using an LCMAPSd service.
 Author:       Mischa Sall\'e, msalle (at) nikhef (dot) nl
 License:      Apache 2
-Dependencies: curl
+Dependencies: libcurl, libjson (json-c)
 
 Description:  Provides a PAM module that can authenticate against an LCMAPSd
               service. It can use either a proxy, e.g. obtained via pam_myproxy
