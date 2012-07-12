@@ -456,9 +456,9 @@ static mypam_err_t _restore_pam_data(pam_handle_t *pamh)	{
  * \param pamh pam handle
  * \param opts options incl format of proxy filename
  * \param cred credentials incl. target uid and gid and proxy filename
- * \return MYPAM_SUCCESS on success or a suitable error code
+ * \return MYPAM_SUCCESS on success or a suitable mypam_err_t error
  */
-static int _chown_rename_proxy(pam_handle_t *pamh,
+static mypam_err_t _chown_rename_proxy(pam_handle_t *pamh,
 			       pam_lcmapsd_opts_t *opts, cred_t *cred)  {
     int rc,err,len;
     lcmapsd_err_t lrc;
@@ -817,12 +817,13 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) 
     switch (rc)	{
 	case MYPAM_SUCCESS:
 	    return PAM_SUCCESS;
+	case MYPAM_DATA_MISSING:
+	    return PAM_CRED_INSUFFICIENT;
 	case MYPAM_USER_UNKNOWN:
 	    return PAM_USER_UNKNOWN;
 	case MYPAM_AUTH_ERR:
 	    return PAM_AUTH_ERR;
 	case MYPAM_ERROR:
-	case MYPAM_DATA_MISSING:
 	default:
 	    return PAM_AUTHINFO_UNAVAIL;
     }
