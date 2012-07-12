@@ -7,42 +7,51 @@ Dependencies: libcurl, libjson (json-c)
 
 Description:  Provides a PAM module that can authenticate against an LCMAPSd
               service. It can use either a proxy, e.g. obtained via pam_myproxy
-	      or using DN (in future also FQANs). In the latter case, it is
-	      necessary that another module has authenticated the input DN, e.g
-	      via pam_radius. In case of using a proxy, it can optionally chown
-	      the proxyfile to target_uid:target_gid. It can also rename the
-	      proxy such that it contains the uid, in that case the env variable
-	      X509_USER_PROXY is updated to point to the new file.
-	      Options can be given either on the pam commandline or in a config
+              or using DN (in future also FQANs). In the latter case, it is
+              necessary that another module has authenticated the input DN, e.g
+              via pam_radius. In case of using a proxy, it can optionally chown
+              the proxyfile to target_uid:target_gid. It can also rename the
+              proxy such that it contains the uid, in that case the env variable
+              X509_USER_PROXY is updated to point to the new file.
+              Currently implemented interfaces are:
+                pam_sm_authenticate     - does LCMAPSd callout to obtain uid/gid
+                pam_sm_acct_mgmt        - idem
+                pam_sm_setcred          - optionally chowns and renames the
+                                          proxy to match the target uid/gid
+                pam_sm_open_session     - idem
+                pam_sm_close_session    - always successful
+              Options can be given either on the pam commandline or in a config
               file which can be specified on the pam commandline.
               Valid options:
-		config           - only on commandline: specifies path of config
-		                   file
+                config           - only on commandline: specifies path of config
+                                   file
                 capath           - as understood by openssl and curl
                 cafile           - idem
                 hostcert         - idem (corresponding to clientcert)
                 hostkey          - idem
-		lcmapsd_url      - LCMAPSd url, e.g.
-		                   https://localhost:8443/lcmaps/mapping/ssl
+                lcmapsd_url      - LCMAPSd url, e.g.
+                                   https://localhost:8443/lcmaps/mapping/ssl
                 lcmapsd_timeout  - LCMAPSd timeout (default 1 sec)
                 lcmapsd_mode     - basic or full (default)
                 proxyfmt         - format for renaming, %d is replaced with
-				   target_uid, XXXXXX as in mkstemp() (default
-				   /tmp/x509up_u%d.XXXXXX)
+                                   target_uid, XXXXXX as in mkstemp() (default
+                                   /tmp/x509up_u%d.XXXXXX)
                 rename           - whether to rename (default 1, i.e. yes)
                 chown            - whether to chown (default 1, i.e. yes)
-		del_proxy_on_fail- remove proxy upon failure (default 0, i.e.
+                del_proxy_on_fail- remove proxy upon failure (default 0, i.e.
                                    no)
                 proxy_as_cafile  - use proxy also as cafile, probably needed on
                                    RH 6 and alike (default 0, i.e. no)
                 intern_env       - whether to use the pam environment to pass
-				   data from pam_sm_authenticate to
-				   pam_sm_setcred (default 1, i.e. yes)
+                                   data from pam_sm_authenticate or
+                                   pam_sm_account to pam_sm_setcred or
+                                   pam_sm_open_session. This is needed for use
+                                   with OpenSSH (default 1, i.e. yes)
 
 Example:      E.g.
-		auth  required   pam_lcmapsd.so capath=/etc/grid-security/certificates lcmapsd_timeout=2
-		
+                auth  required   pam_lcmapsd.so capath=/etc/grid-security/certificates lcmapsd_timeout=2
+
 Notes:        Currently the LCMAPSd does not yet have support for passing FQANs
               via the restful interface and hence the pam_lcmapsd does not yet
-	      use the FQANs. Also the sgids are currently not yet parsed from
-	      the json output.
+              use the FQANs. Also the sgids are currently not yet parsed from
+              the json output.

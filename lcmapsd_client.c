@@ -376,8 +376,19 @@ lcmapsd_err_t _lcmapsd_curl(lcmapsd_opts_t *opts, cred_t *cred, char **errstr) {
     curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, opts->timeout);
 
     /* Do lookup */
-    if ( curl_easy_perform(curl_handle)!=0 ||
-         curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &httpresp)
+    if ( (rc=curl_easy_perform(curl_handle))!=CURLE_OK )   {
+	/* Only handle expired for now, which shows up as a connect error. See
+	 * /usr/include/curl/curl.h for more options */
+	if (rc==CURLE_SSL_CONNECT_ERROR &&
+	    strstr(buffer,"certificate expired"))
+	    rc=LCMAPSD_EXPIRED_CRED;
+	else
+	    rc=LCMAPSD_CURL_ERR;
+	goto _curl_cleanup;
+    }
+
+    /* Get http return code */
+    if ( (rc=curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &httpresp))
 	    != CURLE_OK )   {
 	rc=LCMAPSD_CURL_ERR;
 	goto _curl_cleanup;

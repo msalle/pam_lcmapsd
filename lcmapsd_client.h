@@ -56,13 +56,14 @@ typedef enum    {
     LCMAPSD_NO_ACTION		= 1,	/* nothing to do */
     LCMAPSD_URL_UNKNOWN		= 2,	/* lcmapsd url is invalid */ 
     LCMAPSD_MISSING_CRED	= 3,	/* no DN, ... */
-    LCMAPSD_OUT_OF_MEM		= 4,	/* out of memory */
-    LCMAPSD_PARSE_ERR		= 5,	/* response parse error */
-    LCMAPSD_FORBIDDEN		= 6,	/* lcmapsd returned 403 */
-    LCMAPSD_CURL_ERR		= 7,	/* curl interaction failed */
-    LCMAPSD_RESPONSE_ERR	= 8,	/* did not obtain valid response */
-    LCMAPSD_CHOWN_ERR		= 9,	/* could not chown proxy */
-    LCMAPSD_RENAME_ERR		= 10,	/* could not rename proxy */
+    LCMAPSD_EXPIRED_CRED	= 4,	/* expired credentials */
+    LCMAPSD_OUT_OF_MEM		= 5,	/* out of memory */
+    LCMAPSD_PARSE_ERR		= 6,	/* response parse error */
+    LCMAPSD_FORBIDDEN		= 7,	/* lcmapsd returned 403 */
+    LCMAPSD_CURL_ERR		= 8,	/* curl interaction failed */
+    LCMAPSD_RESPONSE_ERR	= 9,	/* did not obtain valid response */
+    LCMAPSD_CHOWN_ERR		= 10,	/* could not chown proxy */
+    LCMAPSD_RENAME_ERR		= 11,	/* could not rename proxy */
 } lcmapsd_err_t;
 
 /************************************************************************/

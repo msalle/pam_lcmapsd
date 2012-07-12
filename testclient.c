@@ -10,7 +10,7 @@
  * \param errstr contains curl error message and will be freed
  * \return 0 on LCMAPSD_SUCCESS or 1 on failure
  */
-static int _parse_lcmapsd_returncode(int rc, char *errstr) {
+static int _parse_lcmapsd_returncode(lcmapsd_err_t rc, char *errstr) {
     /* Default pam return code: 1 */
     int prc=1;
 
@@ -23,6 +23,9 @@ static int _parse_lcmapsd_returncode(int rc, char *errstr) {
 	    break;
 	case LCMAPSD_MISSING_CRED:
 	    fprintf(stderr,"User credentials are unset\n");
+	    break;
+	case LCMAPSD_EXPIRED_CRED:
+	    fprintf(stderr,"User credentials have expired\n");
 	    break;
 	case LCMAPSD_OUT_OF_MEM:
 	    fprintf(stderr,"Out of memory while connecting to LCMAPSd\n");
@@ -65,6 +68,7 @@ int main(int argc, char *argv[])    {
     cred_t cred;
     pam_lcmapsd_opts_t opts;
     int i,rc,prc=0;
+    lcmapsd_err_t lrc;
     int err;
     char *errstr=NULL;
 
@@ -87,7 +91,8 @@ int main(int argc, char *argv[])    {
     }
 
     /* Get commandline (and perhaps config file) options */
-    switch(_pam_lcmapsd_parse_config(&opts))  {
+    rc=_pam_lcmapsd_parse_config(&opts);
+    switch(rc)  {
 	case 0:
 	    break;
 	case -1:
@@ -122,10 +127,10 @@ int main(int argc, char *argv[])    {
 	cred.DN=strdup(argv[1]);
 
     /* Do lcmapsd run */
-    rc=_lcmapsd_curl(&(opts.lcmapsd), &cred, &errstr);
+    lrc=_lcmapsd_curl(&(opts.lcmapsd), &cred, &errstr);
 
     /* Parse return code (this also free-s clears the errstr) */
-    if ( (prc=_parse_lcmapsd_returncode(rc,errstr))!=0 )
+    if ( (prc=_parse_lcmapsd_returncode(lrc,errstr))!=0 )
 	goto cleanup;
 
     printf("Found credentials:\n");
@@ -144,8 +149,8 @@ int main(int argc, char *argv[])    {
 
 	/* Rename proxy */
 	if (opts.rename)	{
-	    rc=_lcmapsd_rename(&cred, opts.proxyfmt, &err);
-	    switch (rc)	{
+	    lrc=_lcmapsd_rename(&cred, opts.proxyfmt, &err);
+	    switch (lrc)	{
 		case LCMAPSD_NO_ACTION:
 		    /* Nothing to do */
 		    prc=0;
